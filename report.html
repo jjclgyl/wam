@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>JavaScript Webix Demo App Sales Report For Rendering Numerical and Graphical Data</title>
+	<meta name="description" content="You can build beautiful sales reports with Webix UI widgets. Present sales and expenses per month, income and expense rates, year comparison, etc. as an interactive app.">
+	<meta name="keywords" content="webix, demo, sales report, demo app, numerical data, complex data, webix app"/>
+	<meta charset="utf-8">
+
+	<link rel="stylesheet" href="//cdn.webix.com/site/webix.css" type="text/css" media="screen" charset="utf-8">
+	
+	<script src="//cdn.webix.com/site/webix.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="/demos/common/nav.js?v=18"></script>
+	<link rel="stylesheet" type="text/css" href="/demos/common/nav.css?v=18">
+	<link href="/assets/favicon.ico" rel="shortcut icon" />
+</head>
+<body>
+	
+<style>
+	body{
+		background: #F2EFEA;
+	}
+</style>
+<script type="text/javascript">
+
+
+	//data
+	var companies1 = [
+	    { "companyA":"48", "companyB":"23", "quantityA":"936", "quantityB":"456", "month":"January", color: "#ee3639" },
+	    { "companyA":"50", "companyB":"21", "quantityA":"975", "quantityB":"410", "month":"February", color: "#ee9e36" },
+	    { "companyA":"32", "companyB":"10", "quantityA":"624", "quantityB":"200", "month":"March", color: "#eeea36" },
+	    { "companyA":"31", "companyB":"40", "quantityA":"645", "quantityB":"780", "month":"April", color: "#a9ee36" },
+	    { "companyA":"10", "companyB":"30", "quantityA":"200", "quantityB":"610", "month":"May", color: "#36d3ee" },
+	    { "companyA":"13", "companyB":"22", "quantityA":"230", "quantityB":"425", "month":"June", color: "#367fee" },
+	    { "companyA":"32", "companyB":"30", "quantityA":"655", "quantityB":"610", "month":"July", color: "#9b36ee" }
+	];
+
+
+	var rates = [
+		{ income1:"20", expense1:"35", income2:"55", expense2:"50", income3:"70", expense3:"75", month:"January"},
+		{ income1:"40", expense1:"24", income2:"40", expense2:"41", income3:"80", expense3:"65", month:"February"},
+		{ income1:"44", expense1:"20", income2:"27", expense2:"22", income3:"71", expense3:"98", month:"March" },
+		{ income1:"53", expense1:"50", income2:"43", expense2:"36", income3:"96", expense3:"86", month:"April" },
+		{ income1:"91", expense1:"36", income2:"31", expense2:"51", income3:"122", expense3:"87", month:"May" },
+		{ income1:"50", expense1:"40", income2:"56", expense2:"30", income3:"106", expense3:"70", month:"June" },
+		{ income1:"80", expense1:"65", income2:"75", expense2:"70", income3:"155", expense3:"145", month:"July" },
+		{ income1:"90", expense1:"62", income2:"55", expense2:"49", income3:"145", expense3:"111", month:"August" },
+		{ income1:"55", expense1:"40", income2:"60", expense2:"40", income3:"115", expense3:"80", month:"September" },
+		{ income1:"72", expense1:"45", income2:"54", expense2:"12", income3:"136", expense3:"57", month:"October" },
+		{ income1:"100", expense1:"98", income2:"85", expense2:"75", income3:"185", expense3:"171", month:"November" },
+		{ income1:"30", expense1:"45", income2:"63", expense2:"51", income3:"93", expense3:"96", month:"December" }
+	];
+
+	var salary = [
+	    { "companyA":"480", "companyB":"230", "average":"355", "month":"January" },
+	    { "companyA":"500", "companyB":"210", "average":"355", "month":"February" },
+	    { "companyA":"500", "companyB":"220", "average":"360", "month":"March" },
+	    { "companyA":"510", "companyB":"250", "average":"380", "month":"April" },
+	    { "companyA":"525", "companyB":"300", "average":"412", "month":"May" },
+	    { "companyA":"560", "companyB":"310", "average":"435", "month":"June" },
+	    { "companyA":"525", "companyB":"320", "average":"422", "month":"Jule" },
+	    { "companyA":"570", "companyB":"350", "average":"460", "month":"August" },
+	    { "companyA":"580", "companyB":"380", "average":"485", "month":"September" },
+	    { "companyA":"600", "companyB":"370", "average":"485", "month":"October" },
+	    { "companyA":"620", "companyB":"380", "average":"500", "month":"November" },
+	    { "companyA":"630", "companyB":"400", "average":"515", "month":"December" }
+	];
+
+	var groupdata = [
+		{"id":"2","sales":"527","year":"1998","company":"Company 1"},{"id":"4","sales":"403","year":"2008","company":"Company 2"},
+		{"id":"7","sales":"377","year":"2006","company":"Company 2"},{"id":"11","sales":"215","year":"2004","company":"Company 2"},
+		{"id":"12","sales":"1500","year":"2003","company":"Company 1"},{"id":"14","sales":"234","year":"2006","company":"Company 2"},
+		{"id":"16","sales":"878","year":"2008","company":"Company 1"},{"id":"17","sales":"248","year":"2004","company":"Company 2"},
+		{"id":"18","sales":"311","year":"2007","company":"Company 1"},{"id":"19","sales":"724","year":"1996","company":"Company 1"},
+		{"id":"21","sales":"884","year":"2003","company":"Company 1"},{"id":"22","sales":"936","year":"1996","company":"Company 2"},
+		{"id":"24","sales":"923","year":"2006","company":"Company 2"},{"id":"25","sales":"977","year":"2005","company":"Company 1"},
+		{"id":"28","sales":"521","year":"1999","company":"Company 2"},{"id":"2000","sales":"554","year":"2002","company":"Company 1"},
+		{"id":"30","sales":"335","year":"2005","company":"Company 2"},{"id":"32","sales":"600","year":"2000","company":"Company 1"},
+		{"id":"34","sales":"743","year":"2006","company":"Company 1"},{"id":"35","sales":"904","year":"2003","company":"Company 2"},
+		{"id":"36","sales":"1000","year":"2007","company":"Company 1"},{"id":"37","sales":"526","year":"2008","company":"Company 2"},
+		{"id":"38","sales":"459","year":"1997","company":"Company 1"},{"id":"39","sales":"357","year":"2007","company":"Company 2"},
+		{"id":"40","sales":"655","year":"2009","company":"Company 2"},{"id":"42","sales":"526","year":"2008","company":"Company 2"},
+		{"id":"43","sales":"125","year":"1998","company":"Company 2"},{"id":"45","sales":"125","year":"2000","company":"Company 2"},
+		{"id":"46","sales":"633","year":"2002","company":"Company 2"},{"id":"48","sales":"791","year":"2008","company":"Company 2"},
+		{"id":"51","sales":"267","year":"2000","company":"Company 2"},{"id":"52","sales":"350","year":"2005","company":"Company 2"},
+		{"id":"53","sales":"477","year":"2006","company":"Company 1"},{"id":"56","sales":"808","year":"2000","company":"Company 1"},
+		{"id":"57","sales":"837","year":"1999","company":"Company 2"},{"id":"58","sales":"352","year":"2004","company":"Company 1"},
+		{"id":"59","sales":"656","year":"1999","company":"Company 2"},{"id":"62","sales":"700","year":"1997","company":"Company 1"},
+		{"id":"63","sales":"845","year":"2002","company":"Company 2"},{"id":"65","sales":"264","year":"2006","company":"Company 1"},
+		{"id":"66","sales":"846","year":"2005","company":"Company 1"},{"id":"67","sales":"616","year":"1999","company":"Company 2"},
+		{"id":"68","sales":"877","year":"1998","company":"Company 2"},{"id":"70","sales":"999","year":"2008","company":"Company 2"},
+		{"id":"71","sales":"674","year":"2006","company":"Company 1"},{"id":"73","sales":"105","year":"2002","company":"Company 2"},
+		{"id":"75","sales":"372","year":"2004","company":"Company 2"},{"id":"76","sales":"566","year":"2009","company":"Company 2"},
+		{"id":"77","sales":"800","year":"2001","company":"Company 1"},{"id":"78","sales":"919","year":"2004","company":"Company 2"},
+		{"id":"79","sales":"412","year":"2008","company":"Company 1"},{"id":"80","sales":"591","year":"1999","company":"Company 2"},
+		{"id":"81","sales":"588","year":"2006","company":"Company 1"},{"id":"82","sales":"517","year":"2005","company":"Company 2"},
+		{"id":"83","sales":"800","year":"2002","company":"Company 1"},{"id":"84","sales":"474","year":"1998","company":"Company 1"},
+		{"id":"85","sales":"408","year":"2008","company":"Company 2"},{"id":"86","sales":"1212","year":"2003","company":"Company 1"},
+		{"id":"88","sales":"580","year":"1999","company":"Company 2"},{"id":"91","sales":"172","year":"1997","company":"Company 1"},
+		{"id":"92","sales":"2825","year":"1997","company":"Company 1"},{"id":"94","sales":"907","year":"2008","company":"Company 1"},
+		{"id":"95","sales":"515","year":"1996","company":"Company 2"},{"id":"96","sales":"675","year":"1996","company":"Company 2"},
+		{"id":"98","sales":"836","year":"1996","company":"Company 2"},{"id":"100","sales":"944","year":"2007","company":"Company 1"}
+	];
+
+	//ui
+
+	var menu = {
+
+
+		rows:[
+			{type:"header", template:"Report Filter"},
+			{view:"list", id:"sidemenu", scroll: false, layout:"y", template:"#value#", select: true, width:230,
+			data:[
+				{id:"smonth", value:"Sales per Month", options:[{id:1, value: "Per Company"}, {id:2, value:"Comparative"}]},
+				{id:"emonth", value:"Expenses Per Month", options:[]},
+				{id:"rates", value:"Income and Expense Rates", options:[{id:5, value:"Company A"}, {id:6, value:"Company B"}, {id:7, value:"Total"}]},
+				{id:"salary", value:"Avarage Employee Salary", options:[]},
+				{id:"year", value:"Year Comparison", options:[]}
+			],
+			on:{
+				onItemClick:function(id){
+					//var mid = this.getItem(id).id;
+					$$("main").showBatch(id);
+					$$("header").setValue(this.getItem(id).value);
+					if(id == "year"){
+						$$("year_filter").show();
+						$$("chart_filter").hide();
+					}else{
+						$$("year_filter").hide();
+						if(id=="salary" || id=="emonth"){
+							$$("chart_filter").hide();
+						}
+						else{
+							if(!$$("chart_filter").isVisible())
+								$$("chart_filter").show();
+							$$("chart_filter").define("options", this.getItem(id).options);
+
+							$$("chart_filter").render();
+							if(id=="smonth")
+								$$("chart_filter").setValue(1);
+							else
+								$$("chart_filter").setValue(5);
+						}
+
+					}
+
+				}
+			}
+		}
+		]
+	};
+
+	var salesData = {
+		id: "smonthData",
+		view: "datatable",
+		borderless: true,
+		columns:[
+			{ id:"month",	header:{ text:"Month", rowspan:2}, 	width:200, fillspace:1},
+			{ id:"companyA",	header:[{text:"Company A", colspan:2}, "Amount"], template: "#companyA#,000,000",	width:150, fillspace:1},
+			{ id:"quantityA",	header:["","Quantity"],template: "#quantityA#",	width:150, fillspace:1},
+			{ id:"companyB",	header:[{text:"Company B", colspan:2}, "Amount"], template: "#companyB#,000,000",	width:150, fillspace:1},
+			{ id:"quantityB",	header:["","Quantity"],template: "#quantityB#",	width:150, fillspace:1}
+		],
+		select: "cell",
+		data: companies1
+	};
+	//values:[{text:"Income",color:"#23d683"},{text:"Expense",color:"#9365f2"}],
+	var chart1 = {
+		id:1,
+		type: "clean",
+		cols:[
+				{
+					view: "chart",
+					type:"bar",
+					radius:0,
+					value:"#companyA#",
+					color: "#23d683",
+					xAxis: function(obj){
+						return obj.month.slice(0,3);
+					},
+					yAxis:{
+						start:0,
+						step: 10,
+						end: 60
+					},
+					tooltip:{
+						template: "Amount: <b>#companyA#,000,000</b><br>Quantity: <b>#quantityA#</b>"
+					},
+					borderless: true,
+					data:companies1,
+					on:{
+						onItemClick: function(id){
+							$$("smonthData").select(id,"companyA");
+							$$("smonthData").select(id,"quantityA",true);
+						}
+					}
+				},
+				{
+					view: "chart",
+					type:"bar",
+					radius:0,
+					value:"#companyB#",
+					color: "#9365f2",
+					xAxis: function(obj){
+						return obj.month.slice(0,3);
+					},
+					yAxis:{
+						start:0,
+						step: 10,
+						end: 60
+					},
+					tooltip:{
+						template: "Amount: <b>#companyB#,000,000</b><br>Quantity: <b>#quantityB#</b>"
+					},
+					borderless: true,
+					data:companies1,
+					on:{
+						onItemClick: function(id){
+							$$("smonthData").select(id,"companyB");
+							$$("smonthData").select(id,"quantityB",true);
+						}
+					}
+				}
+			]
+
+	};
+	var chart2 = {
+		id:2,
+        view:"chart",
+        minWidth:500,
+        type:"radar",
+		xAxis:{template:"#month#" },
+        disableItems:true,
+		borderless: true,
+        alpha: 0.5,
+		legend:{
+			layout:"x",
+			width: 100,
+			height:50,
+			align:"center",
+			valign:"top",
+			marker:{ width:15, radius:3 },
+			values:[
+				{text:"company A",color:"#23d683"},
+				{text:"company B",color:"#9365f2"}
+			]
+		},
+		padding:{
+			top: 10,
+			left:20,
+			right: 20,
+			bottom: 25
+		},
+		series:[
+            {
+                value:"#companyA#",
+                tooltip:{ template:"#companyA#"},
+                color:"#23d683",
+                line:{ color:"#23d683", width:1},
+                fill:"#23d683"
+            },
+            {
+                value:"#companyB#",
+                tooltip:{ template:"#companyB#" },
+                fill:"#9365f2",
+                line:{ color:"#9365f2", width:1 }
+            }
+		],
+		data:companies1
+	};
+
+	var chart3 = {
+		id:3,
+		batch:"emonth",
+		rows:[
+			{
+				view:"chart",
+				type:"bar",
+				borderless: true,
+				radius:0,
+				xAxis: function(obj){
+					return obj.month.slice(0,3);
+				},
+				yAxis:{
+					start:0,
+					step:10,
+					end:100
+				},
+				legend:{
+					layout:"x",
+					width: 100,
+					height:25,
+					align:"center",
+					valign:"bottom",
+					marker:{ width:15, radius:3 },
+					values:[
+						{text:"company A",color:"#acd863"},
+						{text:"company B",color:"#59c2d4"}
+					]
+				},
+				eventRadius: 5,
+				series:[
+					{
+						value:"#expense1#",
+						color: "#acd863",
+						tooltip:{ template:"#expense1#,000,000"}
+					},
+					{
+						value:"#expense2#",
+						color:"#59c2d4",
+						tooltip:{ template:"#expense2#,000,000" }
+					}
+				],
+				data:rates
+			},
+			{
+				id: "emonthData",
+				view: "datatable",
+				borderless: true,
+				columns:[
+					{ id:"month",	header:"Month", 	width:200, fillspace:1},
+					{ id:"expense1", css:"number",	header:"Company A", template: "#expense1#,000,000",	width:200, fillspace:1},
+
+					{ id:"expense2", css:"number",	header:"Company B", template: "#expense2#,000,000",	width:200, fillspace:1}
+				],
+				select: "cell",
+				data: rates
+
+			}
+		]
+
+
+
+	};
+
+	var incomeExpense = {
+		id: "InExData",
+		view: "datatable",
+		borderless: true,
+		columns:[
+			{ id:"month",	header:{ text:"Month", rowspan:2}, 	width:200, fillspace:1},
+			{ id:"income1",	css:"number", header:[{text:"Company A", colspan:2}, "Expense"], template: "#income1#,000,000",	width:150, fillspace:1},
+			{ id:"expense1", css:"number",	header:["","Income"],template: "#expense1#,000,000",	width:150, fillspace:1},
+			{ id:"income2",	css:"number", header:[{text:"Company B", colspan:2}, "Expense"], template: "#income2#,000,000",	width:150, fillspace:1},
+			{ id:"expense2", css:"number", header:["","Income"],template: "#expense2#,000,000",	width:150, fillspace:1}//,
+			//{ id:"empty",	header:["&nbsp;","&nbsp;"], template: ""}
+		],
+		select: "cell",
+		data: rates
+
+	};
+
+	var chart5 = {
+		id:5,
+		view:"chart",
+		type:"bar",
+		borderless: true,
+		radius:0,
+		xAxis: function(obj){
+			return obj.month.slice(0,3);
+		},
+		yAxis:{ start:0, step:10, end:100 },
+		legend:{
+			values:[{text:"Income",color:"#58dccd"},{text:"Expense",color:"#a7ee70"}],
+			valign:"bottom",
+			align:"center",
+			width:120,
+			layout:"x"
+		},
+		series:[
+			{ value:"#income1#", color: "#58dccd",
+				tooltip:{ template:"#income1#" }
+			},
+			{ value:"#expense1#", color:"#a7ee70",
+				tooltip:{ template:"#expense1#" }
+			}
+		],
+		data:rates
+
+
+	};
+
+	var chart6 = {
+		id:6,
+		view:"chart",
+        type:"bar",
+		borderless: true,
+		radius:0,
+		xAxis: function(obj){
+			return obj.month.slice(0,3);
+		},
+		yAxis:{ start:0, step:10, end:100 },
+		legend:{
+			values:[{text:"Income",color:"#73c9dd"},{text:"Expense",color:"#69a2f4"}],
+			valign:"bottom",
+			align:"center",
+			width:120,
+			layout:"x"
+        },
+		series:[
+            { value:"#income2#", color: "#73c9dd",
+		        tooltip:{ template:"#income2#" }
+		    },
+            { value:"#expense2#", color:"#69a2f4",
+                tooltip:{ template:"#expense2#" }
+            }
+		],
+		data:rates
+	};
+
+	var chart7 = {
+		id:7,
+		view:"chart",
+        type:"bar",
+
+		borderless: true,
+		radius:0,
+		xAxis: function(obj){
+			return obj.month.slice(0,3);
+		},
+		yAxis:{ start:0, step:20, end:200 },
+		legend:{
+			values:[{text:"Income",color:"#23d683"},{text:"Expense",color:"#9365f2"}],
+			valign:"bottom", 
+			align:"center",
+			width:120,
+			layout:"x"
+        },
+		series:[
+            { value:"#income3#", color: "#23d683",
+		        tooltip:{ template:"#income3#" }
+		    },
+            { value:"#expense3#", color:"#9365f2",
+                tooltip:{ template:"#expense3#" }
+            }
+		],
+		data:rates
+	};
+
+
+	
+	var chart8 = {
+			id:8,
+			batch:"salary",
+			rows:[
+				{
+					view:"chart",
+					type:"line",
+					borderless: true,
+					xAxis: function(obj){
+						return obj.month.slice(0,3);
+					},
+					yAxis:{
+						start:0,
+						step:100,
+						end: 700
+					},
+					legend:{
+						values:[{text:"Company A",color:"#4aa397", markerType: "item"},{text:"Company B",color:"#69ba00", markerType: "item"}, {text:"Average", color:"#de619c", markerType: "item"}],
+						align:"right",
+						valign:"middle",
+						layout:"y",
+						width: 120,
+						margin: 10
+					},
+					series:[
+						{
+
+							value:"#companyA#",
+							item:{
+								borderColor: "#4aa397",
+								color: "#4aa397",
+								type: "t"
+							},
+							line:{
+								color:"#4aa397",
+								width:2
+							}
+						},
+						{
+							value:"#companyB#",
+							type:"line",
+
+
+							item:{
+								borderColor: "#69ba00",
+								color: "#69ba00",
+								type: "r"
+							},
+							line:{
+								color:"#69ba00",
+								width:2
+							}
+						},
+						{
+							type:"line",
+							value:"#average#",
+
+
+							item:{
+								borderColor: "#b7286c",
+								color: "#de619c",
+								type: "s"
+							},
+							line:{
+								color:"#de619c",
+								width:2
+							}
+						}
+					],
+					data: salary
+				},
+				{
+					view: "datatable",
+					borderless: true,
+					columns:[
+						{ id:"month",	header:"Month", 	fillspace:1},
+						{ id:"companyA", css:"number",	header:"Company A", 	fillspace:1},
+						{ id:"companyB", css:"number",	header:"Company B", 	fillspace:1},
+						{ id:"average", css:"number",	header:"Average Salary", 	fillspace:1}
+					],
+					select: "cell",
+					data: salary
+
+				}
+			]
+
+	};
+
+	var chart9 = {
+		batch:"year", margin:15,
+		borderless: true,
+		type: "clean",
+		rows:[
+			{
+				view:"chart",
+				type:"bar",
+				id: "yearChart",
+				value:"#sales#",
+
+				color: "#acd863",
+				radius:0,
+				barWidth: 50,
+				xAxis:{ template:"#id#"},
+				yAxis:{},
+				scheme:{
+					$sort:{
+						by:"id",
+						as:"string",
+						dir:"asc"
+					},
+					$group:{
+						by:"year",
+						map:{ sales:["sales","sum"] }
+					}
+				},
+				data: groupdata
+			}
+		]
+	};
+
+	//functions for chart 9
+
+	function  groupA(){
+			$$("yearChart").group({
+				by:"company",
+				map:{
+					sales:["sales","sum"]
+				}
+			});
+			$$("yearChart").sort("id","asc","string");
+		}
+
+		function  groupB(){
+			$$("yearChart").group({
+				by:"year",
+				map:{
+					sales:["sales","sum"]
+				}
+			});
+			$$("yearChart").sort("id","asc","string");
+		}
+
+		function  groupC(){
+			$$("yearChart").group({
+				by:"year",
+				map:{
+					sales:["sales","max"]
+				}
+			});
+			$$("yearChart").sort("id","asc","string");
+		}
+
+		function  groupD(){
+			$$("yearChart").group({
+				by:"year",
+				map:{
+					sales:["sales","min"]
+				}
+			});
+		}
+
+		function getAverage(prop, data){
+    		if (!data.length) return 0;
+				var summ = 0;
+				for (var i = data.length - 1; i >= 0; i--) {
+					summ += prop(data[i])*1;
+				};
+				return summ/data.length;
+		}
+
+		function  groupE(){
+			$$("yearChart").group({
+				by:"year",
+				map:{
+					sales:["sales", getAverage]
+				}
+			});
+		}
+
+	
+
+
+	var views = {
+		id:"main",  visibleBatch:"smonth", rows:[
+			{
+				view: "toolbar",
+				elements:[
+				{view:"label", id:"header", label:"Sales per Month"},
+				{view:"segmented", id:"chart_filter", minWidth: 375, optionWidth:120, options:[{id:1, value: "Per Company"}, {id:2, value:"Comparative"}], align:"center", multiview:true, height:35},
+				{},
+				{view:"richselect", id:"year_filter",width: 350, hidden:true, inputWidth:300, align:"right", label:"Group by..", labelAligh:"right", value:"B", options:[
+					{id:"A", value:"Company"}, {id:"B", value:"Year (Total sales)"}, {id:"C", value:"Year (Max sales)"},
+					{id:"D", value:"Year (Min sales)"}, {id:"E", value:"Avarage Sales"}
+				]
+				}
+			]},
+			{rows:[{animate: false,cells:[chart1, chart2]},salesData], batch:"smonth"},
+			chart3,
+			{type:"clean", animate:false, rows:[{animate:false,cells:[chart5, chart6, chart7]},incomeExpense], batch:"rates"},
+			chart8, 
+			chart9
+		]
+	};
+
+	var ui = {
+		rows:[
+			{view:"navbar", value:"report"},
+			/*{view:"toolbar", height:50, elements:[
+				{view:"label", label:"<div style = 'font-size:18px; margin-right:5px; color:#fff;'>Webix Sales Report</div>" }
+			]},*/
+			{ type: "space", cols:[ menu, views]}
+		]
+	};
+
+	webix.ready(function(){
+		webix.ui(ui);
+
+		$$("sidemenu").select("rates");
+		$$("sidemenu").callEvent("onItemClick", ["rates"]);
+
+		$$("year_filter").attachEvent("onChange", function(){
+			window['group'+this.getValue()]();
+		});
+	});
+
+</script>
+	<script>  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-41866635-1', 'webix.com');
+  ga('send', 'pageview');
+</script>
+<!-- Yandex.Metrika counter --><script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter22473802 = new Ya.Metrika({id:22473802, clickmap:true, trackLinks:true, trackHash:true}); } catch(e) { } }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f, false); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script><noscript><div><img src="//mc.yandex.ru/watch/22473802" style="position:absolute; left:-9999px;" alt="" /></div></noscript><!-- /Yandex.Metrika counter -->
+
+</body>
+</html>

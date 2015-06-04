@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" href="../codebase/webix.css" type="text/css" media="screen" charset="utf-8">
+		<script src="../codebase/webix.js" type="text/javascript" charset="utf-8"></script>
+		<style>
+			#areaA, #areaB{
+				margin: 30px;
+			}
+           .webix_form.webix_layout_form {
+            margin: auto;
+           }
+		</style>
+		<title>Basic  Validation</title>
+	</head>
+	<body>
+
+		<form>
+			<div id="areaA"></div>
+			<div id="areaB"></div>
+		</form>
+	
+
+		<script type="text/javascript" charset="utf-8">
+		var form1 = [
+			{ view:"text", label:'Login', name:"login" },
+			{ view:"text", type:"password", label:'Password', name:"password" },
+			{ view:"button", value: "Submit", click:function(){
+				var form = this.getParentView();
+				if (form.validate())
+					webix.message("All is correct");
+				else
+					webix.message({ type:"error", text:"Form data is invalid" });
+			}}
+		];
+
+
+		webix.ui({
+			container:"areaA",
+			view:"form", scroll:false, width:400, 
+
+			elements: form1,
+			rules:{
+				"login":webix.rules.isEmail,
+				"password":webix.rules.isNotEmpty
+			},
+			elementsConfig:{
+				labelPosition:"top"
+			}
+		});	
+
+		</script>
+	</body>
+</html>

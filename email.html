@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>JavaScript Webix Email Demo App for Managing Hierarchically Arranged Data</title>
+	<meta name="description" content="With Webix, you can manage complex data in a fast and intuitive way. Check the functionality of the main Webix data widgets by means of this demo.">
+	<meta name="keywords" content="webix, demo, email app, email app demo, data management, data management widgets"/>
+	<meta charset="utf-8">
+
+	<link rel="stylesheet" href="//cdn.webix.com/site/webix.css" type="text/css" media="screen" charset="utf-8">
+	
+	<script src="//cdn.webix.com/site/webix.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="/demos/common/nav.js?v=18"></script>
+	<link rel="stylesheet" type="text/css" href="/demos/common/nav.css?v=18">
+	<link href="/assets/favicon.ico" rel="shortcut icon" />
+</head>
+<body>
+	<style>
+	body{
+		background: #F2EFEA;
+	}
+</style>
+<script type="text/javascript">
+
+	var data = [
+		{id:1, folder:1, name: "Alex Stern", email: "alex@spam.com", subject:"Invitation", date: "25/07/2013 12:30:20"},
+		{id:2, folder:1, name: "Sofia O'Neal", email: "sofia@spam.com", subject:"Report", date: "25/07/2013 16:10:07"},
+		{id:3, folder:1, name: "Jacob Erickson", email: "jacob@spam.com", subject:"Go ahead, make my day", date: "26/07/2013 11:25:50"},
+		{id:4, folder:1, name: "Alice", email: "alice@spam.com", subject:"Confirmation request", date: "26/07/2013 15:28:46"},
+		{id:6, folder:1, name: "Sofia O'Neal", email: "sofia@spam.com", subject:"Re: Details for Ticket 256", date: "30/07/2013 17:10:17"},
+		{id:5, folder:1, name: "Alex Stern", email: "alex@spam.com", subject:"Requested info", date: "30/07/2013 12:58:20"},
+		{id:7, folder:1, name: "Jacob Erickson", email: "jacob@spam.com", subject:"Urgent", date: "28/07/2013 09:02:11"},
+		{id:11, folder:2, name: "Alex Stern", email: "alex@spam.com", subject:"Re: Forecast", date: "25/07/2013 14:10:45"},
+		{id:12, folder:2, name: "Sofia O'Neal", email: "sofia@spam.com", subject:"Party invitation", date: "25/07/2013 17:05:10"}
+	];
+	var ui = { rows:[
+		{ view:"navbar", value:"email" },
+		{
+			type: "space",
+			rows:[
+				{
+					view: "toolbar", height: 45, elements:[
+						{view: "label", label: "<span style='font-size: 18px;'>Webix Email Manager</span>"}
+					]
+				},
+				{
+					type:"wide", cols:[
+					{
+						type: "clean",
+						rows:[
+							{
+								view:"tree",
+								css: "rounded_top",
+								select: true,
+								width:280,
+								type:{
+									folder:function(obj){
+										return "<img src='common/tree/"+obj.icon+".png' style='position:relative; top:2px; left:-2px;'>";
+									}
+								},
+								data:[
+									{ id:"1", value:"Inbox", icon:"inbox"},
+									{ id:"2", value:"Sent", icon:"sent"},
+									{ id:"3", value:"Drafts", icon:"drafts"},
+									{ id:"4", value:"Trash", icon:"trash"},
+									{ id:"5", value:"Contact Groups", open:true, icon:"folder", data:[
+										{ id:"5-1", value:"Friends", icon:"file"},
+										{ id:"5-2", value:"Blocked", icon:"file"}
+									]
+									}
+								]
+							},
+							{
+								view: "calendar", css: "rounded_bottom"
+							}
+						]
+
+					},
+					{ type:"wide",rows:[
+						{ view:"datatable", css: "rounded_top", scrollX:false, columns:[
+							{ id:"checked", header:{ content:"masterCheckbox" }, template:"{common.checkbox()}", width: 40 },
+							{ id:"name", width: 250, header:"From" },
+							{ id:"subject", header:"Subject", fillspace:true },
+							{ id:"date", header:"Date", width: 150 }
+						], select:"row", data: data, ready:function(){
+							//webix.delay(function(){
+							this.select(2);
+							//},this);
+						}},
+						{ height: 45, cols:[
+							{ view:"button", id: "reply", type: "iconButton",  label:"Reply", icon:"reply", width: 95, hidden: true},
+							{ view:"button", type: "iconButton", label:"Create", icon:"envelope", width: 95 },
+							{},
+							{ view:"button", type: "iconButton", label:"Delete", icon:"times", width: 95 }
+						]},
+						{ id:"details", template:"No message selected"}
+					]}
+				]
+
+
+			}
+			]
+		}
+	]};
+
+	webix.ready(function(){
+		webix.ui(ui);
+		$$("$datatable1").bind($$("$tree1"),function(obj,filter){
+			return obj.folder == filter.id;
+		})
+		var message = "Proin id sapien quis tortor condimentum ornare nec ac ligula. " +
+		"Vestibulum varius euismod lacus sit amet eleifend. " +
+		"Quisque in faucibus nulla. Pellentesque a egestas ipsum. " +
+		"Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae;" +
+		" Quisque massa lectus, rutrum vitae risus sit amet, porttitor tempus libero."
+		$$("$datatable1").attachEvent("onAfterSelect",function(){
+			$$("reply").show();
+			$$("details").define("template",message);
+			$$("details").render()
+		})
+		$$("$tree1").select(1)
+	});
+</script>
+	<script>  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-41866635-1', 'webix.com');
+  ga('send', 'pageview');
+</script>
+<!-- Yandex.Metrika counter --><script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter22473802 = new Ya.Metrika({id:22473802, clickmap:true, trackLinks:true, trackHash:true}); } catch(e) { } }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f, false); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script><noscript><div><img src="//mc.yandex.ru/watch/22473802" style="position:absolute; left:-9999px;" alt="" /></div></noscript><!-- /Yandex.Metrika counter -->
+
+</body>
+</html>

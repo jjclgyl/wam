@@ -1,0 +1,588 @@
+/**
+ * Notification service
+ * 
+ * @todo use pubnub angular instead of low level API
+ * 
+ * @version 0.1
+ * @author mehdi(dot)lefebvre(at)gmail(dot)com
+ */
+var app = angular.module('ionicApp');
+app.service("notificationService", [ '$http', '$q', function($http, $q) {
+	'use strict';
+
+	/**
+	 * Configuration of the application that should occur in the mailn context
+	 * of the application.
+	 * 
+	 * We do not have to know more about the behavior of the framework since we
+	 * do not have
+	 */
+	var Events = {
+			QUESTION_UPDATE: 0x001,
+			QUESTION_CONNECT: 0x002,
+			QUESTION_DISCONNECT: 0x003,
+			QUESTION_RECONNECT: 0x004,
+			QUESTION_ERROR: 0x005,
+			
+			MESSAGE_NEW: 0x101,
+			MESSAGE_CONNECT: 0x102,
+			MESSAGE_DISCONNECT: 0x103,
+			MESSAGE_RECONNECT: 0x104,
+			MESSAGE_ERROR: 0x105
+		},
+		
+		// current session uuid. Since we have to ask channels using uuid, we have to control our own uuid
+		uuid = PUBNUB.uuid(),
+		
+		// default channel to publish information if no arg are provided by publish client
+		default_channel = "my_channel",
+	
+		// pubnub object
+		pubnub = PUBNUB.init({
+			publish_key : 'pub-c-f8fb99bc-353d-4656-a2bc-fc9a96a75941', // CHANGE ME
+			subscribe_key : 'sub-c-b65f3016-04fa-11e4-9c3d-02ee2ddab7fe', // CHANGE ME
+			uuid : uuid
+		}),
+		
+		// configuration of the notification service
+		config = {
+			urls: {
+				questions: '',
+				message: ''
+			}
+		},
+		
+		// operation pending indicator
+		pending = false, 
+		
+		// information about all available stream for the connection
+		// following configuration is the default one
+		streamInfos = {
+			question: null,
+			message: null,
+			grants: {
+				question: {
+					read: true,
+					write: false
+				},
+				message: {
+					read: true,
+					write: false
+				}
+			}
+		}, 
+		
+		// timestamp indicate the last subscription date
+		lastQuestionSubscribtionCheck = 0, 
+		
+		// that means we never have subscribe to this channel
+		questionChannelSubscribtionState = 0,
+		
+		// all event handler
+		eventHandlers = {
+			questions: {
+				update: {},
+				connect: {},
+				disconnect: {},
+				reconnect: {}
+			},
+			messages: {
+				update: {},
+				connect: {},
+				disconnect: {},
+				reconnect: {}
+			}
+		};
+	
+	/* ================================================= */
+	/*   				Internal Utilities 				 */
+	/* ================================================= */
+	
+	/**
+	 * Get current timestamp
+	 * 
+	 * @return {number} js timestamp in millis
+	 */
+	function time() { 
+		return new Date().getTime(); 
+	}
+	
+	/**
+	 * Check subscription to the question channel for the conversation
+	 * 
+	 * @param {string} channel the name of the channel
+	 * @param {object} callbacks hash of callbacks to set to the subscription
+	 * @return {object} return the promise associate to the request
+	 */
+	function subscribeIfNot(channel, callbacks) {
+		var deferred = $q.defer();
+		
+		// retrieve list of channel which are listening on right now
+		pubnub.where_now({
+			
+			// our uuid to fetch only message for us
+			uuid: uuid,
+			
+			// a success listing callback
+			callback: function(data) {
+				var channels = data.channels,
+					found = false;
+				angular.forEach(channels, function(name, index) {
+					if(!found && channel == name) {
+						found = true;
+					}
+				});
+				if(found) {
+					// inform context that the check is now completed and we are now sure about subscription
+					deferred.resolve(channel);
+				} else {
+					// inform context that we are about to reconnect our client
+					deferred.notify({
+						action: 'subscribtion:refresh',
+						time: time(),
+						channel: channel
+					});
+					// not subscribed, do it now ...
+					var _cbs = $.extend(callbacks, {
+							channel: channel,
+							heartbeat: 10e3, // auto disconnect after 10 s of idle
+							restore: true //to automatically attempt to retrieve any missed messages since we are last connected.
+						});
+					pubnub.subscribe(_cbs);
+				}
+			},
+			
+			// listing error callback
+			error: function(data) {
+				console.log(data);
+				deferred.reject(data);
+			}
+		});
+		
+		return deferred.promise;
+	}
+	
+	/**
+	 * Handler to react when a message comes on the question stream.
+	 * We made an architecture real time oriented with channel dispatching.
+	 * It implies that when a message comes on the message stream we are sure that we have to handle it.
+	 * A message is composed like followings :
+	 * 	message: {
+	 * 		channel: <channel_name>,
+	 * 		questions: {
+	 * 			old_question: <the_old_question>, // the most recent question
+	 * 			new_questionL <the_new_question>, // the current question
+	 * 			history: [] // the full question history
+	 * 		}
+	 * 	}
+	 * 
+	 * @param {object} data data sent on the question stream
+	 */
+	function onQuestionStreamMessage(data) {
+		angular.element(document).scope().$emit(Events.QUESTION_UPDATE, data);
+	}
+	
+	/**
+	 * 
+	 */
+	function OnQuestionStreamConnect(data) {
+		angular.element(document).scope().$emit(Events.QUESTION_CONNECT, data);
+	}
+	
+	/**
+	 * 
+	 */
+	function onQuestionStreamDisconnect(data) {
+		angular.element(document).scope().$emit(Events.QUESTION_DISCONNECT, data);
+	}
+	
+	/**
+	 * 
+	 */
+	function onQuestionStreamReconnect(data) {
+		angular.element(document).scope().$emit(Events.QUESTION_RECONNECT, fn);
+	}
+	
+	/**
+	 * 
+	 */
+	function onQuestionStreamError(data) {
+		angular.element(document).scope().$emit(Events.QUESTION_ERROR, fn);
+	}
+	
+	/**
+	 * Flag question subscription as complete
+	 */
+	function completeQuestionSubscription() {
+		lastQuestionSubscribtionCheck = new Date().getTime();
+		questionChannelSubscribtionState = 1;
+	}
+	
+	/**
+	 * Reinit all question subscription flags
+	 */
+	function reInitQuestionSubscription() {
+		lastQuestionSubscribtionCheck = 0;
+		questionChannelSubscribtionState = 0;
+	}
+	
+	/**
+	 * fetch the question stream information for the current connection.
+	 * The question depending on the meeting. A meeting may have more than one subscriber and
+	 */
+	function fetchQuestionStreamInformations() {
+		var url = config.urls.questions;
+		if(null === streamInfos.question && !pending) {
+			pending = true;
+			$http(url).succes(function(data, status, headers, config) {
+				pending = false;
+				streamInfos.question = {
+						url : data.url,
+						channel: data.channel,
+						nickname: data.nickname,
+						auth_token: data.auth_token
+				};
+			}).error(function(data, status, headers, config) {
+				pending = false;
+				// TODO : find out what we have to do here !
+			});
+		}
+	}
+	
+	/**
+	 * Handler to react when a message comes on the question stream.
+	 * We made an architecture real time oriented with channel dispatching.
+	 * It implies that when a message comes on the message stream we are sure that we have to handle it.
+	 * A message is composed like followings :
+	 * 	message: {
+	 * 		channel: <channel_name>,
+	 * 		operation: 1, // 1=>add, 2=>update, 3=>delete
+	 * 		message: {
+	 * 			uuid: <message_uuid>,
+	 * 			source: 1, // 1=>sms, 2=>webapp, 3=>mobileapp, 4=>mail (only for future use)
+	 * 			content: <message>, // the content of the message
+	 * 			metas: {
+	 * 				sendDate: <date|yyy/mm/dd>,
+	 * 				sendTime: <time|HH:ii:ss>
+	 * 			}, // message meta information (for now and later)
+	 * 		}
+	 * 	}
+	 * 
+	 * @param {object} data data sent on the message stream
+	 */
+	function onMessageStreamMessage(data) {
+		angular.element(document).scope().$emit(Events.MESSAGE_NEW, data);
+	}
+	
+	function onMessageStreamConnect(data) {
+		angular.element(document).scope().$emit(Events.MESSAGE_CONNECT, data);
+	}
+	
+	function onMessageStreamDisconnect(data) {
+		angular.element(document).scope().$emit(Events.MESSAGE_DISCONNECT, data);
+	}
+	
+	function onMessageStreamReconnect(data) {
+		angular.element(document).scope().$emit(Events.MESSAGE_RECONNECT, data);
+	}
+	
+	function onMessageStreamError(data) {
+		angular.element(document).scope().$emit(Events.MESSAGE_ERROR, data);
+	}
+	
+	/* ================================================= */
+	/*   			Stream behavior handlers			 */
+	/* ================================================= */
+	
+	/**
+	 * Add an event listener for new incoming message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addQuestionMessageEventListener(fn) {
+		eventHandlers.questions.update = angular.element(document).scope().$on(Events.QUESTION_UPDATE, fn);
+	}
+	
+	/**
+	 * Remove an event listener for new incoming message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeQuestionMessageEventListener(fn) {
+		eventHandlers.questions.update();
+	}
+	
+	/**
+	 * Add an event listener for new connection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addQuestionConnectEventListener(fn) {
+		eventHandlers.questions.connect = angular.element(document).scope().$on(Events.QUESTION_CONNECT, fn);
+	}
+	
+	/**
+	 * Remove an event listener for new connection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeQuestionConnectEventListener(fn) {
+		eventHandlers.questions.connect();
+	}
+	
+	/**
+	 * Add an event listener for disconnection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addQuestionDisconnectEventListener(fn) {
+		eventHandlers.questions.disconnect = angular.element(document).scope().$on(Events.QUESTION_DISCONNECT, fn);
+	}
+	
+	/**
+	 * Remove an event listener for disconnection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeQuestionDisconnectEventListener(fn) {
+		eventHandlers.questions.disconnect();
+	}
+	
+	/**
+	 * Add an event listener for reconnection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addQuestionReconnectEventListener(fn) {
+		eventHandlers.questions.reconnect = angular.element(document).scope().$on(Events.QUESTION_RECONNECT, fn);
+	}
+	
+	/**
+	 * Remove an event listener for reconnection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeQuestionReconnectEventListener(fn) {
+		eventHandlers.questions.reconnect();
+	}
+	
+	/**
+	 * Add an event listener for error message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addQuestionErrorEventListener(fn) {
+		eventHandlers.questions.error = angular.element(document).scope().$on(Events.QUESTION_ERROR, fn);
+	}
+	
+	/**
+	 * Remove an event listener for error message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeQuestionErrorEventListener(fn) {
+		eventHandlers.questions.error();
+	}
+	
+	/**
+	 * Add an event listener for new incoming message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addMessageMessageEventListener(fn) {
+		eventHandlers.messages.update = angular.element(document).scope().$on(Events.MESSAGE_NEW, fn);
+	}
+	
+	/**
+	 * Remove an event listener for new incoming message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeMessageMessageEventListener(fn) {
+		eventHandlers.messages.update();
+	}
+	
+	/**
+	 * Add an event listener for new connection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addMessageConnectEventListener(fn) {
+		eventHandlers.messages.connect = angular.element(document).scope().$on(Events.MESSAGE_CONNECT, fn);
+	}
+	
+	/**
+	 * Remove an event listener for new connection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeMessageConnectEventListener(fn) {
+		eventHandlers.messages.connect();
+	}
+	
+	/**
+	 * Add an event listener for disconnection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addMessageDisconnectEventListener(fn) {
+		eventHandlers.messages.disconnect = angular.element(document).scope().$on(Events.MESSAGE_DISCONNECT, fn);
+	}
+	
+	/**
+	 * Remove an event listener for disconnection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeMessageDisconnectEventListener(fn) {
+		eventHandlers.messages.disconnect();
+	}
+	
+	/**
+	 * Add an event listener for reconnection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function addMessageReconnectEventListener(fn) {
+		eventHandlers.messages.reconnect = angular.element(document).scope().$on(Events.MESSAGE_RECONNECT, fn);
+	}
+	
+
+	
+	/**
+	 * remove an event listener for reconnection message on the question stream.
+	 * 
+	 * @param {function} fn the event listener
+	 */
+	function removeMessageReconnectEventListener(fn) {
+		eventHandlers.messages.reconnect();
+	}
+	
+	/* ================================================= */
+	/*   				  High Level API 				 */
+	/* ================================================= */
+	
+	/**
+	 * Redo subscription on the question channel if necessary.
+	 * 
+	 * @param {function} onSuccess success process callback
+	 * @param {function} onError error process callback
+	 */
+	function getInQuestionChannel(onSuccess, onError) {
+		var channel = uuid + "_question",
+			cbs = {
+				message: onQuestionStreamMessage,
+				connect: onQuestionStreamConnect,
+				disconnect: onQuestionStreamDisconnect,
+				reconnect: onQuestionStreamReconnect,
+				error: onQuestionStreamError
+			},
+			promise = subscribeIfNot(channel, cbs);
+		
+		promise.then(function(data) {
+			// handle promise success
+			completeQuestionSubscription();
+			// call back success handler
+			if(onSuccess && (typeof onSuccess == "function")) {
+				onSuccess.call(this, data);
+			}
+			
+		}, function(reason) {
+			// handle promise error
+			reInitQuestionSubscription();
+			// call back error handler
+			if(onError && (typeof onError == "function")) {
+				onError.call(this, data);
+			}
+		});
+	}
+	
+	/**
+	 * Redo subscription on the message channel if necessary.
+	 * 
+	 * @param {function} onSuccess success process callback
+	 * @param {function} onError error process callback
+	 */
+	function getInMessageChannel(onSucces, onError) {
+		var channel = "my_channel",
+			cbs = {
+				message: onMessageStreamMessage,
+				connect: onMessageStreamConnect,
+				disconnect: onMessageStreamDisconnect,
+				reconnect: onMessageStreamReconnect,
+				error: onMessageStreamError
+			},
+			promise = subscribeIfNot(channel, cbs);
+	
+		promise.then(function(data) {
+			// handle promise success
+			
+			// call back success handler
+			if(onSuccess && (typeof onSuccess == "function")) {
+				onSuccess.call(this, data);
+			}
+			
+		}, function(reason) {
+			// handle promise error
+			
+			// call back error handler
+			if(onError && (typeof onError == "function")) {
+				onError.call(this, data);
+			}
+		});
+	}
+	
+	function publish(message, channel) {
+		channel = channel || default_channel;
+		
+		var deferred = $q.defer();
+		
+		pubnub.publish({
+			channel: channel,
+			message: message,
+			callback: function(data) {
+				console.log("Publish success %o", data);
+				deferred.resolve(data);
+			},
+			error: function(data) {
+				console.log("Publish error %o", data);
+				deferred.reject(1);
+			}
+		});
+		
+		return deferred;
+	}
+	
+	/* ================================================= */
+	/*   				     Public API 				 */
+	/* ================================================= */
+
+	return {
+		addQuestionMessageEventListener: addQuestionMessageEventListener,
+		removeQuestionMessageEventListener: removeQuestionMessageEventListener,
+		addQuestionConnectEventListener: addQuestionConnectEventListener,
+		removeQuestionConnectEventListener: removeQuestionConnectEventListener,
+		addQuestionDisconnectEventListener: addQuestionDisconnectEventListener,
+		removeQuestionDisconnectEventListener: removeQuestionDisconnectEventListener,
+		addQuestionReconnectEventListener: addQuestionReconnectEventListener,
+		removeQuestionReconnectEventListener: removeQuestionReconnectEventListener,
+		addQuestionErrorEventListener: addQuestionErrorEventListener,
+		removeQuestionErrorEventListener: removeQuestionErrorEventListener,
+		getInQuestionChannel: getInQuestionChannel,
+		
+		addMessageMessageEventListener: addMessageMessageEventListener,
+		removeMessageMessageEventListener: removeMessageMessageEventListener,
+		addMessageConnectEventListener: addMessageConnectEventListener,
+		removeMessageConnectEventListener: removeMessageConnectEventListener,
+		addMessageDisconnectEventListener: addMessageDisconnectEventListener,
+		removeMessageDisconnectEventListener: removeMessageDisconnectEventListener,
+		addMessageReconnectEventListener: addMessageReconnectEventListener,
+		removeMessageReconnectEventListener: removeMessageReconnectEventListener,
+		getInMessageChannel: getInMessageChannel,
+		
+		publish: publish,
+		
+		uuid : uuid
+	};
+
+} ]);

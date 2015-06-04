@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>JavaScript Webix Demo App Tracker That Quickly Sorts, Filters and Groups Data</title>
+	<meta name="description" content="With Webix widgets, you can develop web apps with sorting, filtering and grouping functions that work on the client side. All the operations with data are made rapidly.">
+	<meta name="keywords" content="webix, demo app, tracker demo app, filtering, sorting,"/>
+	<meta charset="utf-8">
+
+	<link rel="stylesheet" href="//cdn.webix.com/site/webix.css" type="text/css" media="screen" charset="utf-8">
+	
+	<script src="//cdn.webix.com/site/webix.js" type="text/javascript" charset="utf-8"></script>
+	<script type="text/javascript" src="/demos/common/nav.js?v=18"></script>
+	<link rel="stylesheet" type="text/css" href="/demos/common/nav.css?v=18">
+	<link href="/assets/favicon.ico" rel="shortcut icon" />
+</head>
+<body>
+	
+<script type="text/javascript" src="./common/views/colorlist.js"></script>
+<style type="text/css">
+html, body{
+	height:100%;
+	background: #F2EFEA;
+}
+.app{
+	background: #fff;
+}
+.webix_list_item {
+	line-height: 20px;
+	border-bottom-color: transparent;
+}
+.grid .webix_list_item{
+	padding-top:10px;	
+	border-bottom-color: #ddd;
+}
+.template{
+	display:none;
+}
+
+/* buttons */
+.addIssue{
+	position:absolute; top:10px; right:20px; height:40px; width:250px;
+	background-color: #9e9;
+	cursor:pointer;
+	border:1px outset #0A0;
+	border-radius: 4px;
+}
+.addIssue:active{
+	background: #9f9;
+	border: 2px inset #0A0;
+}
+
+.mainSelector .webix_list_item {
+	line-height:50px;
+}
+.listCounter{
+	background: #444;
+	color:#fff;
+	border-radius: 8px;
+	width:28px;
+	text-align: center;
+	display: block;
+	margin-top: 10px;
+	line-height:30px;
+	float:right;
+}
+
+.webix_icon.icon-trash{
+	display: block;
+	opacity:0.6;
+	cursor:pointer;
+}
+
+.issueLabels{
+	float:right;
+	padding-left:10px;
+	padding-right:10px;
+	border-radius:4px;
+	margin-right:4px;
+	float:right;
+}
+.webix_list_item {
+	cursor: default;
+}
+</style>
+<script>
+var labeldata = [
+	{id:1, text:"Bug", color:"#fe4e4e", text_color:"#fff"},
+	{id:2, text:"Feature", color:"#40ac40", text_color:"#fff"},
+	{id:3, text:"Enhancement", color:"#406edd", text_color:"#fff"},
+	{id:4, text:"Invalid", color:"#fe864e", text_color:"#fff"},
+	{id:5, text:"Question", color:"#ffff3e", text_color:"#444"},
+	{id:6, text:"Duplicate", color:"#864efe", text_color:"#fff"},
+	{id:7, text:"Not Confirmed", color:"#969696", text_color:"#fff"}
+];
+
+var app = {
+	name:"app",
+	debug:false,	//comment for production
+
+	init:function(){
+		webix.ui(app.ui);
+		app.trigger("dataInit");
+	},
+	trigger:function(name){
+		app.callEvent(name, arguments);
+	},
+	on:function(name, code){
+		app.attachEvent(name, code);
+	},
+	utils:{}
+};
+
+webix.extend(app, webix.EventSystem);
+
+
+//custom code can be added below this line
+//good place for custom helpers
+
+//global helpers
+app.utils.dateDiffFormat = function(diff){
+	var days = Math.floor(diff/(24*60*60*1000));
+
+	if (days === 0)
+		return "today";
+	else if (days === 1)
+		return "yesterday";
+	else if (days < 60)
+		return days+" days ago";
+	else
+		return Math.floor(days/31)+" month(s) ago";
+};
+
+app.utils.isDataLoaded = function(){
+	app.loadingDataCount--;
+	if (app.loadingDataCount == 0){
+		app.trigger("appInit");
+		app.trigger("dataUpdated"); 
+	}
+}
+
+app.utils.arrayLabels = function(a){
+	var b={};
+	for ( var i = 0; i< a.length; i++){
+		if (!b[a[i].issue_id]){
+			b[a[i].issue_id] = [];
+			b[a[i].issue_id].push(a[i].label_id);
+		}
+		else 
+			b[a[i].issue_id].push(a[i].label_id);
+	}
+	return b;
+}
+
+app.utils.arrayToHash = function(a){
+	var b = {};
+	for (var i = 0; i < a.length; i++)
+		b[a[i].id] = a[i].value;
+	return b;
+};
+
+
+
+
+
+
+
+
+
+(function(){
+
+var assigned_filter = {
+	view:"list", id:"main-issue-selector", css:"mainSelector",
+	borderless:true, yCount:4,
+	template:"#value# <span class='listCounter'>#count#</span>",
+	type:{ height:50 },
+	select:true,
+	data:[
+		{ id:"all", 		value:"All Issues", count:0 },
+		{ id:"assigned",	value:"Assigned to you", count:0 },
+		{ id:"creator", 	value:"Created by you", count:0 },
+		{ id:"notassigned",	value:"Not assigned ones", count:0 }
+	],
+	on:{"onAfterSelect": function(){
+		app.trigger("filterIssues");
+		}
+	}
+};
+
+var label_filter = {
+	view:"colorlist", id:"label_filter",
+	autoheight:true, borderless:true,
+	on:{
+		"onselectchange": function(){
+			app.trigger("filterIssues");
+		}
+	}
+};
+
+var issues_filter = {
+	rows:[
+		assigned_filter,
+		{ height:35 },
+		label_filter,
+		{}
+	], width:250, borderless:false
+};
+
+var issues_grid = {
+	view:"list", id:"issues-grid", css:"grid", borderless:true,
+	type:{ 
+		height:60,
+		template:"html->issue_record",
+		assigned:function(obj){ 
+			return app.authorsHash[obj.assigned];
+		},
+		created:function(obj){
+			return app.authorsHash[obj.created];
+		},
+		labels:function(obj){
+			var result = "";
+			if (!app.issuesLabels || !app.issuesLabels[obj.id])
+				return "";
+			for (var i = 0; i < app.issuesLabels[obj.id].length; i++){
+				var labelId = parseInt(app.issuesLabels[obj.id][i]);
+				if(labelId){
+					var label = app.labels.getItem(labelId);
+					result += "<div class='issueLabels' style='background:" + 
+								label.color + ";color:" + 
+								label.text_color + "'>"+
+								label.text +"</div>";
+				}
+			}
+			return result;
+		}
+	},
+	on:{
+		onItemClick:function(id){ app.trigger("showIssue", id); }
+	},
+	header:false
+};
+
+var issues_bar = {
+	view:"layout", paddingY:5, paddingX:25, cols:[
+		{ view:"segmented", id:"filter_segment", options:[ "closed", "open"], width:200, 
+		  on:{"onChange":function(){ app.trigger("filterIssues");  }}
+		}, 
+		{}
+	]
+};
+
+var issues_list = {
+	rows:[
+		issues_bar,
+		issues_grid
+	], margin:6
+};
+
+var issues_view = {
+	type:"line", cols:[
+		issues_filter, { view:"resizer" },
+		issues_list
+	], padding:10, margin:10, borderless:true
+};
+var milest_filter ={
+	width: 250,
+	view:"list", id:"milestone_filter", css:"mainSelector",
+	borderless:true, scroll:false,
+	template:"#value# <span class='listCounter'>#count#</span>",
+	type:{ height:50 },
+	select:true,
+	data:[
+		{ id:"allMS", 		value:"All Milestones", count:0 },
+		{ id:"openMS",	value:"Open Milestones", count:0 },
+		{ id:"closedMS", 	value:"Closed Milestones", count:0 }
+	]
+};
+var milest_list = {
+	view: "list"
+};
+var milest_list = {};
+var milestones_view = {
+	type:"line", cols:[
+		milest_filter, { view:"resizer" },
+		milest_list
+	], padding:10, margin:10, borderless:true
+}
+
+var ui = {
+	css: "app",
+	rows:[
+		{
+		view:"tabview", cells:[
+			{
+				header:"Issues",
+				body: issues_view
+			},
+			{
+				header:"Milestones",
+				body: milestones_view
+			}
+		],
+		tabbar: { optionWidth:268 }
+	}], type:"line", padding:20
+};
+
+
+//export
+app.ui = { rows:[ { view:"navbar", value:"tracker" }, ui ]};
+
+})();
+
+
+
+
+//init date and global constants
+app.on("dataInit", function(){
+	
+	//count of loading data
+	app.loadingDataCount = 2;
+
+	app.issueLabels = new webix.DataCollection({
+		url:"common/issuesToLabels.js"
+	});
+	
+	//collection of all issues
+	app.issues = new webix.DataCollection({ 
+		url: "common/issuedata.js",
+		scheme:{
+			$init:function(obj){
+				var date = webix.i18n.parseFormatDate(obj.createdDate);
+				obj.createdDateText = app.utils.dateDiffFormat(app.now - date);
+			}
+		},
+		on:{
+			"data->onStoreUpdated":function(){
+				app.authorsHash = app.utils.arrayToHash(app.authors);
+				app.authorsArray = app.authors;
+				app.issuesLabels = app.utils.arrayLabels(app.issueLabels.serialize());
+				app.trigger("dataUpdated"); 
+			},
+			onAfterLoad:function(){ 
+				app.utils.isDataLoaded();
+			}
+		}
+	});
+
+	//current date
+	app.now = new Date();
+	
+	app.labels = new webix.DataCollection({
+		data: labeldata,
+		on:{
+			onAfterLoad:function(){ 
+				app.utils.isDataLoaded();
+			}
+		}
+	});
+
+	
+
+	//authors
+	app.myId = 1;
+
+	app.authors=[
+		{id:1, value:"Mark Milligan"},
+		{id:2, value:"Sean Hollander"},
+		{id:3, value:"Claire Bean"}
+	];
+
+	
+
+	
+});
+
+app.on("dataUpdated", function(){
+	var status = $$("filter_segment").getValue();
+	var filter = $$("main-issue-selector").getSelectedId();
+	//calculate assigned and status
+	var created = 0;
+	var assigned = 0;
+	var free = 0;
+	var all = 0;
+
+	var open = 0;
+	var close = 0;
+
+	app.issues.data.each(function(obj){
+		if (obj.status == status)
+			all++;
+		if (obj.assigned == "0" && obj.status == status)
+			free++;
+		else if (obj.assigned == app.myId && obj.status == status)
+			assigned++;
+		if (obj.created == app.myId && obj.status == status)
+			created++;
+		
+		switch(filter){
+			case "all": 
+			if(obj.status =="closed")
+				close++;
+			else open++;
+			break;
+			case "assigned":
+			if(obj.status =="closed" && obj.assigned == app.myId)
+				close++;
+			else if (obj.status =="open" && obj.assigned == app.myId)
+				open++;
+			break;
+			case "creator":
+			if(obj.status =="closed" && obj.created == app.myId)
+				close++;
+			else if (obj.status =="open" && obj.created == app.myId)
+				open++;
+			break;
+			case "notassigned":
+				if(obj.status =="closed" && obj.assigned == 0)
+				close++;
+				else if (obj.status =="open" && obj.assigned == 0)
+				open++;
+			break;
+			}
+			
+	});
+
+	var list = $$("main-issue-selector");
+	list.getItem("all").count 			= all;
+	list.getItem("assigned").count 		= assigned;
+	list.getItem("creator").count 		= created;
+	list.getItem("notassigned").count 	= free;
+	list.refresh();
+
+	$$("filter_segment").config.options = [
+		{id:"open", value:"Open ("+open+")"},
+		{id:"closed", value:"Closed ("+close+")"}
+	];
+	$$("filter_segment").refresh();
+
+});
+
+
+
+app.on("filterIssues", function(name){
+	var id = $$("main-issue-selector").getSelectedId();
+	var status = $$("filter_segment").getValue();
+	var selectedLabels = $$("label_filter").getSelectedId(true);
+	
+	//filtering by selected labels
+	var isLabelsInIssue = function(id){
+		if (selectedLabels == "")
+			return true;
+		var labels = app.issuesLabels[id];
+		if (!labels)
+			return false;
+		if (selectedLabels.length <= labels.length){
+			var equal = 0;
+			for ( var i = 0; i < selectedLabels.length; i++){
+				for (var j =0; j < labels.length; j++){
+					if (selectedLabels[i] == labels[j]){
+						equal++;
+						if (equal == selectedLabels.length)
+							return true;
+						break;
+					}
+				}
+			}
+			return false;
+		}
+		return false;
+	}
+
+	switch(id){
+		case "all": 
+			$$("issues-grid").filter(function(obj){ 
+            	return obj.status == status && isLabelsInIssue(obj.id); 
+        	});
+		break;
+		case "assigned":
+			$$("issues-grid").filter(function(obj){ 
+            	return obj.assigned==app.myId && obj.status == status && isLabelsInIssue(obj.id); 
+        	});
+		break;
+		case "creator":
+			$$("issues-grid").filter(function(obj){ 
+            	return obj.created==app.myId && obj.status == status && isLabelsInIssue(obj.id); 
+        	});
+		break;
+		case "notassigned":
+			$$("issues-grid").filter(function(obj){ 
+            	return obj.assigned==0 && obj.status == status && isLabelsInIssue(obj.id); 
+        	});
+		break;
+	}
+	app.trigger("dataUpdated");
+});
+
+
+app.main = {
+	init:function(){
+		$$("label_filter").sync(app.labels);
+		$$("issues-grid").sync(app.issues, function(){
+			app.trigger("filterIssues");
+		});
+		$$("main-issue-selector").select("all");
+		$$('filter_segment').setValue("open");
+	}
+};
+app.on("appInit", app.main.init);
+
+
+	webix.ready(function(){
+		app.init();
+	});
+</script>
+
+	<div id="top_header" class='template'>
+		<h2>Webix Issues Tracker <sup>beta</sup></h2>
+		<input type='button' class='addIssue' value='Add Issue' onclick='app.trigger("addIssue")'>
+	</div>
+	<div id="issue_record" class='template'>
+		<div style='float:left; line-height:46px; width:50px; text-align:center;'>#id#</div>
+		<div><b>#header#</b>{common.labels()}</div>
+		<div><span style='color:#666'>Reported by <b>{common.created()}</b>,  #createdDateText# </span></div>
+	</div>
+
+	<script>  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-41866635-1', 'webix.com');
+  ga('send', 'pageview');
+</script>
+<!-- Yandex.Metrika counter --><script type="text/javascript">(function (d, w, c) { (w[c] = w[c] || []).push(function() { try { w.yaCounter22473802 = new Ya.Metrika({id:22473802, clickmap:true, trackLinks:true, trackHash:true}); } catch(e) { } }); var n = d.getElementsByTagName("script")[0], s = d.createElement("script"), f = function () { n.parentNode.insertBefore(s, n); }; s.type = "text/javascript"; s.async = true; s.src = (d.location.protocol == "https:" ? "https:" : "http:") + "//mc.yandex.ru/metrika/watch.js"; if (w.opera == "[object Opera]") { d.addEventListener("DOMContentLoaded", f, false); } else { f(); } })(document, window, "yandex_metrika_callbacks");</script><noscript><div><img src="//mc.yandex.ru/watch/22473802" style="position:absolute; left:-9999px;" alt="" /></div></noscript><!-- /Yandex.Metrika counter -->
+
+</body>
+</html>
